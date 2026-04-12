@@ -222,7 +222,7 @@ useEffect(() => {
 async function handleConfirmOrder() {
     if (!supabase) return;
     
-    // التحقق من وجود منتجات وصورة
+    // 1. التحقق من وجود منتجات وصورة
     if (cartItems.length === 0 || !orderForm.screenshotDataUrl) {
       return notify("Please add products and upload payment proof");
     }
@@ -230,55 +230,42 @@ async function handleConfirmOrder() {
     try {
       notify("Processing order...");
 
-      // 1. تحويل الصورة من نص (Base64) إلى ملف حقيقي لرفعه
+      // 2. تحويل الصورة المرفوعة (Base64) إلى ملف حقيقي لرفعه للـ Storage
       const res = await fetch(orderForm.screenshotDataUrl);
       const blob = await res.blob();
       const fileName = `${user.id}/${Date.now()}_screenshot.png`;
       const file = new File([blob], fileName, { type: "image/png" });
 
-      // 2. رفع الصورة إلى الـ Storage (المجلد الذي أنشأناه orders_images)
+      // 3. رفع الصورة إلى الـ Bucket الذي أنشأناه (orders_images)
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('orders_images')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // 3. الحصول على رابط الصورة المباشر (Public URL)
+      // 4. الحصول على الرابط العام للصورة
       const { data: urlData } = supabase.storage
         .from('orders_images')
         .getPublicUrl(fileName);
 
       const publicImageUrl = urlData.publicUrl;
 
-      // 4. إرسال البيانات النهائية لجدول Customers مع "رابط" الصورة فقط
+      // 5. إرسال البيانات للجدول (مع إضافة الحقول الإجبارية لتجنب الـ Null Error)
       const payload = {
         user_id: user.id,
         name: orderForm.customerName || user.email,
         service: cartItems.map(i => `${i.product.name} x${i.quantity}`).join(", "),
+        
+        // حل مشكلة الـ Null Constraint:
+        type: cartItems[0]?.product.type || "full", 
+        duration: cartItems.map(i => i.product.duration).join(", ") || "1 Month",
+        
         price: cartTotal,
         cost: cartCost,
         profit: cartProfit,
         payment_phone: orderForm.paymentPhone,
         whatsapp_number: orderForm.whatsappNumber,
-        screenshot_url: publicImageUrl, // الرابط بدلاً من النص الطويل
-        status: "pending",
-        date: new Date().toISOString().split("T")[0]
-      };
-
-      const { error: dbError } = await supabase.from("customers").insert(payload);
-      if (dbError) throw dbError;
-
-      // 5. تنظيف السلة والنموذج بعد النجاح
-      setCart([]);
-      setOrderForm({ ...orderForm, screenshotDataUrl: "", customerName: "", paymentPhone: "", whatsappNumber: "" });
-      notify("Order Submitted Successfully ✅");
-      fetchOrders(isAdmin, user.id);
-
-    } catch (error: any) {
-      console.error("Order Error:", error.message);
-      notify("Error: " + error.message);
-    }
-  }
+        screenshot_url: publicImageUrl, // الرابط بدلاً من النص الط
 
   async function handleCreateProduct() {
     if (!supabase) return;

@@ -377,11 +377,81 @@ async function handleConfirmOrder() {
                 type="password"
                 onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
               />
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <button onClick={() => handleLogin("signIn")} className="rounded-2xl bg-cyan-500 py-4 font-bold text-slate-950 hover:bg-cyan-400 transition">Sign In</button>
-                <button onClick={() => handleLogin("signUp")} className="rounded-2xl border border-slate-700 py-4 hover:bg-slate-800 transition">Register</button>
-              </div>
-            </div>
+<div className="space-y-4">
+  
+  {/* hCaptcha */}
+  <div
+    className="h-captcha"
+    data-sitekey="2fc8db30-c3aa-48e6-9c3c-22a89f9cd89e"
+  ></div>
+
+  {/* Buttons */}
+  <div className="grid grid-cols-2 gap-4 pt-4">
+    
+    <button
+      onClick={async () => {
+        const token = (window as any).hcaptcha?.getResponse?.();
+
+        if (!token) {
+          alert("Please complete captcha");
+          return;
+        }
+
+        const verify = await fetch("/api/verify-hcaptcha", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        const result = await verify.json();
+
+        if (!result.success) {
+          alert("Captcha verification failed");
+          return;
+        }
+
+        handleLogin("signIn");
+      }}
+      className="rounded-2xl bg-cyan-500 py-4 font-bold text-slate-950 hover:bg-cyan-400 transition"
+    >
+      Sign In
+    </button>
+
+    <button
+      onClick={async () => {
+        const token = (window as any).hcaptcha?.getResponse?.();
+
+        if (!token) {
+          alert("Please complete captcha");
+          return;
+        }
+
+        const verify = await fetch("/api/verify-hcaptcha", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        const result = await verify.json();
+
+        if (!result.success) {
+          alert("Captcha verification failed");
+          return;
+        }
+
+        handleLogin("signUp");
+      }}
+      className="rounded-2xl border border-slate-700 py-4 hover:bg-slate-800 transition"
+    >
+      Register
+    </button>
+
+  </div>
+</div>
           </section>
         ) : (
           <>

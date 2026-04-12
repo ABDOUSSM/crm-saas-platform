@@ -164,7 +164,7 @@ useEffect(() => {
       if (!profileData || error) {
         const { data: newData } = await supabase!
           .from("users")
-          .upsert({ id: user.id, email: user.email, role: "user" })
+          .upsert({ id: user.id, email: user.email })
           .select()
           .single();
         currentProfile = newData;

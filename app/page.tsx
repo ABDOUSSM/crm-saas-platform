@@ -235,31 +235,36 @@ async function handleConfirmOrder() {
       const fileName = `${user.id}/${Date.now()}_screenshot.png`;
       const file = new File([blob], fileName, { type: "image/png" });
 
-      // 2. رفع الصورة إلى الـ Storage (المجلد الذي أنشأناه orders_images)
+      // 2. رفع الصورة إلى الـ Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('orders_images')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // 3. الحصول على رابط الصورة المباشر (Public URL)
+      // 3. الحصول على رابط الصورة المباشر
       const { data: urlData } = supabase.storage
         .from('orders_images')
         .getPublicUrl(fileName);
 
       const publicImageUrl = urlData.publicUrl;
 
-      // 4. إرسال البيانات النهائية لجدول Customers مع "رابط" الصورة فقط
+      // 4. إرسال البيانات النهائية (مع إضافة type و duration لحل أخطاء الـ Null)
       const payload = {
         user_id: user.id,
         name: orderForm.customerName || user.email,
         service: cartItems.map(i => `${i.product.name} x${i.quantity}`).join(", "),
+        
+        // الحقول الإضافية التي تطلبها قاعدة بياناتك
+        type: cartItems[0]?.product.type || "full", 
+        duration: cartItems.map(i => i.product.duration).join(", ") || "1 Month",
+        
         price: cartTotal,
         cost: cartCost,
         profit: cartProfit,
         payment_phone: orderForm.paymentPhone,
         whatsapp_number: orderForm.whatsappNumber,
-        screenshot_url: publicImageUrl, // الرابط بدلاً من النص الطويل
+        screenshot_url: publicImageUrl, 
         status: "pending",
         date: new Date().toISOString().split("T")[0]
       };
@@ -269,7 +274,14 @@ async function handleConfirmOrder() {
 
       // 5. تنظيف السلة والنموذج بعد النجاح
       setCart([]);
-      setOrderForm({ ...orderForm, screenshotDataUrl: "", customerName: "", paymentPhone: "", whatsappNumber: "" });
+      setOrderForm({ 
+        customerName: "", 
+        paymentPhone: "", 
+        whatsappNumber: "", 
+        screenshotDataUrl: "", 
+        notes: "" 
+      });
+      
       notify("Order Submitted Successfully ✅");
       fetchOrders(isAdmin, user.id);
 

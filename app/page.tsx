@@ -385,32 +385,37 @@ async function handleConfirmOrder() {
           </section>
         ) : (
           <>
-                  {/* Revenue للجميع */}
-                  <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
-                   <p className="text-slate-400 text-sm">Total Revenue</p>
-                    <p className="text-3xl font-bold mt-2 text-white">
-                      {revenue.toFixed(2)} <span className="text-sm">TND</span>
-                    </p>
-                  </div>
+<section className="grid gap-6 md:grid-cols-3">
+  
+  {/* Revenue للجميع */}
+  <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
+    <p className="text-slate-400 text-sm">Total Revenue</p>
+    <p className="text-3xl font-bold mt-2 text-white">
+      {revenue.toFixed(2)} <span className="text-sm">TND</span>
+    </p>
+  </div>
 
-                  {/* Cost + Profit فقط للأدمن */}
-                  {isAdmin && (
-                    <>
-                      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
-                        <p className="text-slate-400 text-sm">Total Cost</p>
-                        <p className="text-3xl font-bold mt-2 text-white">
-                          {cost.toFixed(2)} <span className="text-sm">TND</span>
-                        </p>
-                      </div>
+  {/* Cost فقط للأدمن */}
+  {isAdmin && (
+    <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
+      <p className="text-slate-400 text-sm">Total Cost</p>
+      <p className="text-3xl font-bold mt-2 text-white">
+        {cost.toFixed(2)} <span className="text-sm">TND</span>
+      </p>
+    </div>
+  )}
 
-                      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6 border-b-cyan-500">
-                        <p className="text-slate-400 text-sm">Net Profit</p>
-                        <p className="text-3xl font-bold mt-2 text-cyan-400">
-                          {profit.toFixed(2)} <span className="text-sm">TND</span>
-                        </p>
-                      </div>
-                    </>
-                  )}
+  {/* Profit فقط للأدمن */}
+  {isAdmin && (
+    <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6 border-b-cyan-500">
+      <p className="text-slate-400 text-sm">Net Profit</p>
+      <p className="text-3xl font-bold mt-2 text-cyan-400">
+        {profit.toFixed(2)} <span className="text-sm">TND</span>
+      </p>
+    </div>
+  )}
+
+</section>
 
             <div className="grid gap-8 lg:grid-cols-2">
               <section className="space-y-6">

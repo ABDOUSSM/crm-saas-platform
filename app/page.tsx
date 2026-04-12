@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { jsPDF } from "jspdf";
@@ -50,8 +49,7 @@ type CartItem = {
   quantity: number;
 };
 
-const defaultProducts: Product[] = [
-];
+const defaultProducts: Product[] = [];
 
 export default function CRMPage() {
   const [user, setUser] = useState<any>(null);
@@ -62,22 +60,9 @@ export default function CRMPage() {
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
-  const [orderForm, setOrderForm] = useState({
-    customerName: "",
-    paymentPhone: "",
-    whatsappNumber: "",
-    screenshotDataUrl: "",
-    notes: ""
-  });
+  const [orderForm, setOrderForm] = useState({ customerName: "", paymentPhone: "", whatsappNumber: "", screenshotDataUrl: "", notes: "" });
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [productForm, setProductForm] = useState({
-    name: "",
-    type: "full",
-    duration: "1 Month",
-    price: 0,
-    cost: 0,
-    active: true
-  });
+  const [productForm, setProductForm] = useState({ name: "", type: "full", duration: "1 Month", price: 0, cost: 0, active: true });
 
   const role = profile?.role || "user";
   const isAdmin = role === "admin" || role === "owner";
@@ -88,13 +73,9 @@ export default function CRMPage() {
   );
 
   const cartItems = useMemo(
-    () =>
-      cart
-        .map((item) => ({
-          ...item,
-          product: shopProducts.find((product) => product.id === item.productId)
-        }))
-        .filter((item): item is CartItem & { product: Product } => Boolean(item.product)),
+    () => cart
+      .map((item) => ({ ...item, product: shopProducts.find((product) => product.id === item.productId) }))
+      .filter((item): item is CartItem & { product: Product } => Boolean(item.product)),
     [cart, shopProducts]
   );
 
@@ -110,9 +91,7 @@ export default function CRMPage() {
     const map = new Map<string, { month: string; revenue: number; cost: number; profit: number }>();
     orders.forEach((order) => {
       const dateValue = new Date(order.date);
-      const month = Number.isNaN(dateValue.getTime())
-        ? "Unknown"
-        : dateValue.toLocaleString("en-US", { month: "short", year: "numeric" });
+      const month = Number.isNaN(dateValue.getTime()) ? "Unknown" : dateValue.toLocaleString("en-US", { month: "short", year: "numeric" });
       const existing = map.get(month) ?? { month, revenue: 0, cost: 0, profit: 0 };
       existing.revenue += order.price;
       existing.cost += order.cost;
@@ -122,23 +101,17 @@ export default function CRMPage() {
     return Array.from(map.values());
   }, [orders]);
 
-useEffect(() => {
-    // 1. Guard clause: if supabase is not initialized, do nothing
+  useEffect(() => {
     if (!supabase) return;
-
     async function getInitialSession() {
-      // We already checked for supabase above, so it's safe to use here
       const { data } = await supabase!.auth.getSession();
       setUser(data.session?.user ?? null);
     }
-    
     getInitialSession();
-
-    // 2. Direct assignment: No optional chaining here because of the guard clause above
+    
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-
     return () => {
       authListener.subscription.unsubscribe();
     };
@@ -150,7 +123,6 @@ useEffect(() => {
       setLoading(false);
       return;
     }
-
     async function loadData() {
       setLoading(true);
       const { data: profileData, error } = await supabase!
@@ -158,9 +130,8 @@ useEffect(() => {
         .select("*")
         .eq("id", user.id)
         .single();
-
+      
       let currentProfile = profileData;
-
       if (!profileData || error) {
         const { data: newData } = await supabase!
           .from("users")
@@ -169,25 +140,20 @@ useEffect(() => {
           .single();
         currentProfile = newData;
       }
-
       setProfile(currentProfile);
+      
       const isUserAdmin = currentProfile?.role === "admin" || currentProfile?.role === "owner";
-
       await fetchOrders(isUserAdmin, user.id);
       await fetchProducts();
       if (isUserAdmin) await fetchUsers();
       setLoading(false);
     }
-
     loadData();
   }, [user]);
 
   async function fetchOrders(adminStatus: boolean, userId: string) {
     if (!supabase) return;
-    const query = adminStatus 
-      ? supabase.from("customers").select("*") 
-      : supabase.from("customers").select("*").eq("user_id", userId);
-    
+    const query = adminStatus ? supabase.from("customers").select("*") : supabase.from("customers").select("*").eq("user_id", userId);
     const { data } = await query.order("created_at", { ascending: false });
     if (data) setOrders(data.map(o => ({ ...o, price: Number(o.price), cost: Number(o.cost), profit: Number(o.profit) })));
   }
@@ -211,60 +177,78 @@ useEffect(() => {
 
   async function handleLogin(mode: "signIn" | "signUp") {
     if (!supabase) return;
-    const { error } = mode === "signIn" 
+
+    // --- التحقق من hCaptcha ---
+    const token = (window as any).hcaptcha?.getResponse?.();
+    if (!token) {
+      notify("Please complete captcha");
+      return;
+    }
+
+    try {
+      const verify = await fetch("/api/verify-hcaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const result = await verify.json();
+
+      if (!result.success) {
+        notify("Captcha verification failed");
+        return;
+      }
+    } catch (e) {
+      notify("Error connecting to captcha service");
+      return;
+    }
+    // --------------------------
+
+    const { error } = mode === "signIn"
       ? await supabase.auth.signInWithPassword({ email: authForm.email, password: authForm.password })
       : await supabase.auth.signUp({ email: authForm.email, password: authForm.password });
-    
+
     if (error) notify(error.message);
     else notify(mode === "signIn" ? "Logged In Successfully" : "Check your email to verify");
   }
-async function handleConfirmOrder() {
+
+  async function handleConfirmOrder() {
     if (!supabase) return;
-    
-    // التحقق من وجود منتجات وصورة
     if (cartItems.length === 0 || !orderForm.screenshotDataUrl) {
       return notify("Please add products and upload payment proof");
     }
 
     try {
       notify("Processing order...");
-
-      // 1. تحويل الصورة من نص (Base64) إلى ملف حقيقي لرفعه
+      
       const res = await fetch(orderForm.screenshotDataUrl);
       const blob = await res.blob();
       const fileName = `${user.id}/${Date.now()}_screenshot.png`;
       const file = new File([blob], fileName, { type: "image/png" });
 
-      // 2. رفع الصورة إلى الـ Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('orders_images')
         .upload(fileName, file);
-
+        
       if (uploadError) throw uploadError;
 
-      // 3. الحصول على رابط الصورة المباشر
       const { data: urlData } = supabase.storage
         .from('orders_images')
         .getPublicUrl(fileName);
-
+        
       const publicImageUrl = urlData.publicUrl;
 
-      // 4. إرسال البيانات النهائية (مع إضافة type و duration لحل أخطاء الـ Null)
       const payload = {
         user_id: user.id,
         name: orderForm.customerName || user.email,
         service: cartItems.map(i => `${i.product.name} x${i.quantity}`).join(", "),
-        
-        // الحقول الإضافية التي تطلبها قاعدة بياناتك
-        type: cartItems[0]?.product.type || "full", 
+        type: cartItems[0]?.product.type || "full",
         duration: cartItems.map(i => i.product.duration).join(", ") || "1 Month",
-        
         price: cartTotal,
         cost: cartCost,
         profit: cartProfit,
         payment_phone: orderForm.paymentPhone,
         whatsapp_number: orderForm.whatsappNumber,
-        screenshot_url: publicImageUrl, 
+        screenshot_url: publicImageUrl,
         status: "pending",
         date: new Date().toISOString().split("T")[0]
       };
@@ -272,19 +256,11 @@ async function handleConfirmOrder() {
       const { error: dbError } = await supabase.from("customers").insert(payload);
       if (dbError) throw dbError;
 
-      // 5. تنظيف السلة والنموذج بعد النجاح
       setCart([]);
-      setOrderForm({ 
-        customerName: "", 
-        paymentPhone: "", 
-        whatsappNumber: "", 
-        screenshotDataUrl: "", 
-        notes: "" 
-      });
-      
+      setOrderForm({ customerName: "", paymentPhone: "", whatsappNumber: "", screenshotDataUrl: "", notes: "" });
       notify("Order Submitted Successfully ✅");
       fetchOrders(isAdmin, user.id);
-
+      
     } catch (error: any) {
       console.error("Order Error:", error.message);
       notify("Error: " + error.message);
@@ -294,6 +270,7 @@ async function handleConfirmOrder() {
   async function handleCreateProduct() {
     if (!supabase) return;
     if (!productForm.name || productForm.price <= 0) return notify("Invalid product data");
+    
     const { error } = await supabase.from("products").insert(productForm);
     if (!error) {
       setProductForm({ name: "", type: "full", duration: "1 Month", price: 0, cost: 0, active: true });
@@ -338,8 +315,7 @@ async function handleConfirmOrder() {
         <header className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <LayoutDashboard className="text-cyan-400" />
-              Admin Store
+              <LayoutDashboard className="text-cyan-400" /> Admin Store
             </h1>
             <p className="text-slate-400 mt-1">Digital Services Management System</p>
           </div>
@@ -366,22 +342,21 @@ async function handleConfirmOrder() {
           <section className="max-w-md mx-auto rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
             <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
             <div className="space-y-4">
-              <input
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none focus:border-cyan-400 transition"
-                placeholder="Email Address"
-                onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-              />
-              <input
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none focus:border-cyan-400 transition"
-                placeholder="Password"
-                type="password"
-                onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-              />
+              <input className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none focus:border-cyan-400 transition" placeholder="Email Address" onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} />
+              <input className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none focus:border-cyan-400 transition" placeholder="Password" type="password" onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} />
+              
+              {/* قسم hCaptcha مصحح وموجود بشكل سليم */}
+              <div className="flex justify-center my-4">
+                <div className="h-captcha" data-sitekey="2fc8db30-c3aa-48e6-9c3c-22a89f9cd89e"></div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <button onClick={() => handleLogin("signIn")} className="rounded-2xl bg-cyan-500 py-4 font-bold text-slate-950 hover:bg-cyan-400 transition">Sign In</button>
                 <button onClick={() => handleLogin("signUp")} className="rounded-2xl border border-slate-700 py-4 hover:bg-slate-800 transition">Register</button>
               </div>
             </div>
+            {/* استدعاء سكربت hCaptcha */}
+            <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
           </section>
         ) : (
           <>
@@ -415,15 +390,12 @@ async function handleConfirmOrder() {
                         </div>
                         <span className="bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full text-sm font-bold">{p.price} TND</span>
                       </div>
-                      <button 
-                        onClick={() => {
-                          const existing = cart.find(i => i.productId === p.id);
-                          if (existing) setCart(cart.map(i => i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
-                          else setCart([...cart, { productId: p.id, quantity: 1 }]);
-                          notify("Added to cart");
-                        }}
-                        className="mt-6 w-full rounded-2xl bg-slate-800 py-3 text-sm font-bold group-hover:bg-cyan-500 group-hover:text-slate-950 transition"
-                      >
+                      <button onClick={() => {
+                        const existing = cart.find(i => i.productId === p.id);
+                        if (existing) setCart(cart.map(i => i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
+                        else setCart([...cart, { productId: p.id, quantity: 1 }]);
+                        notify("Added to cart");
+                      }} className="mt-6 w-full rounded-2xl bg-slate-800 py-3 text-sm font-bold group-hover:bg-cyan-500 group-hover:text-slate-950 transition">
                         Add to Cart
                       </button>
                     </div>
@@ -456,12 +428,10 @@ async function handleConfirmOrder() {
                         <span className="text-cyan-400">{cartTotal.toFixed(2)} TND</span>
                       </div>
                     </div>
-
                     <div className="space-y-4 pt-4">
                       <input className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none" placeholder="Customer Name" onChange={e => setOrderForm({...orderForm, customerName: e.target.value})} />
                       <input className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none" placeholder="Payment Phone Number" onChange={e => setOrderForm({...orderForm, paymentPhone: e.target.value})} />
                       <input className="w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 outline-none" placeholder="WhatsApp Contact" onChange={e => setOrderForm({...orderForm, whatsappNumber: e.target.value})} />
-                      
                       <div className="relative">
                         <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-800/50 transition">
                           <Plus className="text-slate-500 mb-2" />
@@ -479,7 +449,6 @@ async function handleConfirmOrder() {
                           <div className="mt-2 text-green-400 text-sm font-bold text-center">✓ Image uploaded successfully</div>
                         )}
                       </div>
-
                       <button onClick={handleConfirmOrder} className="w-full rounded-2xl bg-cyan-500 py-4 font-bold text-slate-950 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition">
                         Confirm Order
                       </button>
@@ -495,7 +464,7 @@ async function handleConfirmOrder() {
                   <div className="h-8 w-1 bg-cyan-500 rounded-full"></div>
                   <h2 className="text-3xl font-bold">Admin Panel ({role})</h2>
                 </div>
-
+                
                 <div className="grid gap-8 xl:grid-cols-2">
                   <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
                     <h3 className="text-xl font-bold mb-6">Monthly Profit Growth</h3>
@@ -511,7 +480,7 @@ async function handleConfirmOrder() {
                       </ResponsiveContainer>
                     </div>
                   </div>
-
+                  
                   <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
                     <h3 className="text-xl font-bold mb-6">Add New Service</h3>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -519,22 +488,15 @@ async function handleConfirmOrder() {
                       <input value={productForm.price || ''} className="rounded-xl bg-slate-950 border border-slate-800 p-3" placeholder="Price" type="number" onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
                       <input value={productForm.cost || ''} className="rounded-xl bg-slate-950 border border-slate-800 p-3" placeholder="Cost" type="number" onChange={e => setProductForm({...productForm, cost: Number(e.target.value)})} />
                       <select value={productForm.duration} className="rounded-xl bg-slate-950 border border-slate-800 p-3" onChange={e => setProductForm({...productForm, duration: e.target.value})}>
-                        <option value="Month 1">Month 1</option>
-                        <option value="Month 2">Month 2</option>
-                        <option value="Month 3">Month 3</option>
-                        <option value="Month 4">Month 4</option>
-                        <option value="Month 5">Month 5</option>
-                        <option value="Month 6">Month 6</option>
-                        <option value="Month 7">Month 7</option>
-                        <option value="Month 8">Month 8</option>
-                        <option value="Month 9">Month 9</option>
-                        <option value="Month 10">Month 10</option>
-                        <option value="Month 11">Month 11</option>
-                        <option value="Month 12">Month 12</option>
+                        <option value="1 Month">1 Month</option>
+                        <option value="2 Months">2 Months</option>
+                        <option value="3 Months">3 Months</option>
+                        <option value="6 Months">6 Months</option>
+                        <option value="12 Months">12 Months</option>
                       </select>
                       <button onClick={handleCreateProduct} className="sm:col-span-2 rounded-xl bg-cyan-500 text-slate-950 font-bold py-3 hover:bg-cyan-400 transition">Save Service</button>
                     </div>
-
+                    
                     <div className="mt-8 max-h-[200px] overflow-y-auto space-y-2">
                       {products.map(p => (
                         <div key={p.id} className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
@@ -584,7 +546,7 @@ async function handleConfirmOrder() {
                           <p className="text-sm truncate max-w-[150px]">{u.email}</p>
                           <select 
                             value={u.role} 
-                            disabled={u.id === user.id && role !== 'owner'}
+                            disabled={u.id === user.id && role !== 'owner'} 
                             onChange={async (e) => {
                               if (!supabase) return;
                               const newRole = e.target.value;
@@ -593,7 +555,7 @@ async function handleConfirmOrder() {
                                 fetchUsers();
                                 notify("Role updated");
                               }
-                            }}
+                            }} 
                             className="bg-slate-800 text-xs rounded-lg px-2 py-1 outline-none border-none cursor-pointer"
                           >
                             <option value="user">User</option>

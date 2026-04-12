@@ -51,10 +51,10 @@ type CartItem = {
 };
 
 const defaultProducts: Product[] = [
-  { id: "netflix-full-1", name: "Netflix Full Account", type: "full", duration: "1 Month", price: 8.95, cost: 6.0, active: true },
-  { id: "netflix-rental-1", name: "Netflix Screen Rental", type: "rental", duration: "1 Month", price: 6.25, cost: 4.0, active: true },
-  { id: "crunchyroll-full-1", name: "Crunchyroll Premium", type: "full", duration: "1 Month", price: 8.88, cost: 5.5, active: true },
-  { id: "shahid-full-1", name: "Shahid VIP Account", type: "full", duration: "1 Month", price: 7.11, cost: 4.5, active: true },
+  { id: "netflix-full-1", name: "Netflix Full Account", type: "full", duration: "1 Month", price: 10, cost: 6.0, active: true },
+  { id: "netflix-rental-1", name: "Netflix Screen Rental", type: "rental", duration: "1 Month", price: 10, cost: 4.0, active: true },
+  { id: "crunchyroll-full-1", name: "Crunchyroll Premium", type: "full", duration: "1 Month", price: 10, cost: 5.5, active: true },
+  { id: "shahid-full-1", name: "Shahid VIP Account", type: "full", duration: "1 Month", price: 10, cost: 4.5, active: true },
 ];
 
 export default function CRMPage() {

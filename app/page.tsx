@@ -219,27 +219,64 @@ useEffect(() => {
     else notify(mode === "signIn" ? "Logged In Successfully" : "Check your email to verify");
   }
 
-  async function handleConfirmOrder() {
+async function handleConfirmOrder() {
     if (!supabase) return;
-    if (cartItems.length === 0 || !orderForm.screenshotDataUrl) return notify("Please add products and upload payment proof");
-    const payload = {
-      user_id: user.id,
-      name: orderForm.customerName || user.email,
-      service: cartItems.map(i => `${i.product.name} x${i.quantity}`).join(", "),
-      price: cartTotal,
-      cost: cartCost,
-      profit: cartProfit,
-      payment_phone: orderForm.paymentPhone,
-      whatsapp_number: orderForm.whatsappNumber,
-      screenshot_url: orderForm.screenshotDataUrl,
-      status: "pending",
-      date: new Date().toISOString().split("T")[0]
-    };
-    const { error } = await supabase.from("customers").insert(payload);
-    if (!error) {
+    
+    // التحقق من وجود منتجات وصورة
+    if (cartItems.length === 0 || !orderForm.screenshotDataUrl) {
+      return notify("Please add products and upload payment proof");
+    }
+
+    try {
+      notify("Processing order...");
+
+      // 1. تحويل الصورة من نص (Base64) إلى ملف حقيقي لرفعه
+      const res = await fetch(orderForm.screenshotDataUrl);
+      const blob = await res.blob();
+      const fileName = `${user.id}/${Date.now()}_screenshot.png`;
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      // 2. رفع الصورة إلى الـ Storage (المجلد الذي أنشأناه orders_images)
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('orders_images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // 3. الحصول على رابط الصورة المباشر (Public URL)
+      const { data: urlData } = supabase.storage
+        .from('orders_images')
+        .getPublicUrl(fileName);
+
+      const publicImageUrl = urlData.publicUrl;
+
+      // 4. إرسال البيانات النهائية لجدول Customers مع "رابط" الصورة فقط
+      const payload = {
+        user_id: user.id,
+        name: orderForm.customerName || user.email,
+        service: cartItems.map(i => `${i.product.name} x${i.quantity}`).join(", "),
+        price: cartTotal,
+        cost: cartCost,
+        profit: cartProfit,
+        payment_phone: orderForm.paymentPhone,
+        whatsapp_number: orderForm.whatsappNumber,
+        screenshot_url: publicImageUrl, // الرابط بدلاً من النص الطويل
+        status: "pending",
+        date: new Date().toISOString().split("T")[0]
+      };
+
+      const { error: dbError } = await supabase.from("customers").insert(payload);
+      if (dbError) throw dbError;
+
+      // 5. تنظيف السلة والنموذج بعد النجاح
       setCart([]);
-      notify("Order Submitted Successfully");
+      setOrderForm({ ...orderForm, screenshotDataUrl: "", customerName: "", paymentPhone: "", whatsappNumber: "" });
+      notify("Order Submitted Successfully ✅");
       fetchOrders(isAdmin, user.id);
+
+    } catch (error: any) {
+      console.error("Order Error:", error.message);
+      notify("Error: " + error.message);
     }
   }
 

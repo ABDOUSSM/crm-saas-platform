@@ -475,9 +475,18 @@ useEffect(() => {
                       <input value={productForm.price || ''} className="rounded-xl bg-slate-950 border border-slate-800 p-3" placeholder="Price" type="number" onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
                       <input value={productForm.cost || ''} className="rounded-xl bg-slate-950 border border-slate-800 p-3" placeholder="Cost" type="number" onChange={e => setProductForm({...productForm, cost: Number(e.target.value)})} />
                       <select value={productForm.duration} className="rounded-xl bg-slate-950 border border-slate-800 p-3" onChange={e => setProductForm({...productForm, duration: e.target.value})}>
-                        <option value="1 Month">1 Month</option>
-                        <option value="3 Months">3 Months</option>
-                        <option value="1 Year">1 Year</option>
+                        <option value="Month 1">Month 1</option>
+                        <option value="Month 2">Month 2</option>
+                        <option value="Month 3">Month 3</option>
+                        <option value="Month 4">Month 4</option>
+                        <option value="Month 5">Month 5</option>
+                        <option value="Month 6">Month 6</option>
+                        <option value="Month 7">Month 7</option>
+                        <option value="Month 8">Month 8</option>
+                        <option value="Month 9">Month 9</option>
+                        <option value="Month 10">Month 10</option>
+                        <option value="Month 11">Month 11</option>
+                        <option value="Month 12">Month 12</option>
                       </select>
                       <button onClick={handleCreateProduct} className="sm:col-span-2 rounded-xl bg-cyan-500 text-slate-950 font-bold py-3 hover:bg-cyan-400 transition">Save Service</button>
                     </div>

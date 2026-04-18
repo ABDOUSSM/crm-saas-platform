@@ -51,6 +51,16 @@ type CartItem = {
   quantity: number;
 };
 
+type ProductForm = {
+  name: string;
+  type: string;
+  duration: string;
+  price: number;
+  cost: number;
+  active: boolean;
+  image: string;
+};
+
 const defaultProducts: Product[] = [
 ];
 

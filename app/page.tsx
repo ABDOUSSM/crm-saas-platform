@@ -77,8 +77,8 @@ export default function CRMPage() {
     duration: "1 Month",
     price: 0,
     cost: 0,
-    active: true
-    image:""
+    active: true,
+    image: ""
   });
 
   const role = profile?.role || "user";

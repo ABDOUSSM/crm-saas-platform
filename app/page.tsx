@@ -17,6 +17,7 @@ type Product = {
   price: number;
   cost: number;
   active: boolean;
+  image?: string; 
 };
 
 type OrderRecord = {
@@ -77,6 +78,7 @@ export default function CRMPage() {
     price: 0,
     cost: 0,
     active: true
+    image:""
   });
 
   const role = profile?.role || "user";
@@ -424,10 +426,16 @@ async function handleConfirmOrder() {
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {shopProducts.map((p) => (
-                    <div key={p.id} className="group rounded-3xl border border-slate-800 bg-slate-900/40 p-5 hover:border-cyan-500/50 transition">
+                    <div key={p.id} className="group rounded-3xl border border-slate-800 bg-slate-900/40 p-5 hover:border-cyan-500/50 hover:scale-105 transition duration-300">
+                      {p.image && (
+                        <img
+                           src={p.image}
+                          className="w-full h-40 object-cover rounded-xl mb-3"
+                         />
+                       )}
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-bold text-lg">{p.name}</h3>
+                          <h3 className="font-bold text-lg text-white">{p.name}</h3>
                           <p className="text-sm text-slate-500">{p.duration}</p>
                         </div>
                         <span className="bg-cyan-500/10 text-cyan-400 px-3 py-1 rounded-full text-sm font-bold">{p.price} TND</span>
@@ -531,6 +539,12 @@ async function handleConfirmOrder() {
 
                   <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
                     <h3 className="text-xl font-bold mb-6">Add New Service</h3>
+                    <input
+  value={productForm.image || ""}
+  className="rounded-xl bg-slate-950 border border-slate-800 p-3 sm:col-span-2"
+  placeholder="Image URL (https://...)"
+  onChange={e => setProductForm({ ...productForm, image: e.target.value })}
+/>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <input value={productForm.name} className="rounded-xl bg-slate-950 border border-slate-800 p-3" placeholder="Service Name" onChange={e => setProductForm({...productForm, name: e.target.value})} />
                       <input value={productForm.price || ''} className="rounded-xl bg-slate-950 border border-slate-800 p-3" placeholder="Price" type="number" onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
